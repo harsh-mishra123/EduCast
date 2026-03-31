@@ -1,0 +1,363 @@
+version: '3.8'
+
+services:
+  # ====================
+  # INFRASTRUCTURE SERVICES
+  # ====================
+  
+  mongodb:
+    image: mongo:7
+    container_name: classcast-mongodb-prod
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USERNAME}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD}
+    volumes:
+      - mongodb_data_prod:/data/db
+    networks:
+      - classcast-network-prod
+    restart: always
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  redis:
+    image: redis:7-alpine
+    container_name: classcast-redis-prod
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD}
+    volumes:
+      - redis_data_prod:/data
+    networks:
+      - classcast-network-prod
+    restart: always
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: classcast-rabbitmq-prod
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS}
+    volumes:
+      - rabbitmq_data_prod:/var/lib/rabbitmq
+    networks:
+      - classcast-network-prod
+    restart: always
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  minio:
+    image: minio/minio:latest
+    container_name: classcast-minio-prod
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+    command: server /data --console-address ":9001"
+    volumes:
+      - minio_data_prod:/data
+    networks:
+      - classcast-network-prod
+    restart: always
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ====================
+  # APPLICATION SERVICES
+  # ====================
+  
+  auth-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        SERVICE: auth
+    container_name: classcast-auth-prod
+    ports:
+      - "${AUTH_PORT:-3001}:3001"
+    environment:
+      NODE_ENV: production
+    env_file:
+      - .env
+    depends_on:
+      - mongodb
+      - redis
+      - rabbitmq
+    networks:
+      - classcast-network-prod
+    restart: always
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  class-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        SERVICE: class
+    container_name: classcast-class-prod
+    ports:
+      - "${CLASS_PORT:-3002}:3002"
+    environment:
+      NODE_ENV: production
+    env_file:
+      - .env
+    depends_on:
+      - mongodb
+      - rabbitmq
+    networks:
+      - classcast-network-prod
+    restart: always
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  payment-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        SERVICE: payment
+    container_name: classcast-payment-prod
+    ports:
+      - "${PAYMENT_PORT:-3003}:3003"
+    environment:
+      NODE_ENV: production
+    env_file:
+      - .env
+    depends_on:
+      - mongodb
+      - redis
+      - rabbitmq
+    networks:
+      - classcast-network-prod
+    restart: always
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  video-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        SERVICE: video
+    container_name: classcast-video-prod
+    ports:
+      - "${VIDEO_PORT:-3004}:3004"
+    environment:
+      NODE_ENV: production
+    env_file:
+      - .env
+    depends_on:
+      - mongodb
+      - minio
+      - rabbitmq
+    networks:
+      - classcast-network-prod
+    restart: always
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  chat-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        SERVICE: chat
+    container_name: classcast-chat-prod
+    ports:
+      - "${CHAT_PORT:-3005}:3005"
+    environment:
+      NODE_ENV: production
+    env_file:
+      - .env
+    depends_on:
+      - mongodb
+      - redis
+      - rabbitmq
+    networks:
+      - classcast-network-prod
+    restart: always
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  notification-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        SERVICE: notification
+    container_name: classcast-notification-prod
+    ports:
+      - "${NOTIFICATION_PORT:-3006}:3006"
+    environment:
+      NODE_ENV: production
+    env_file:
+      - .env
+    depends_on:
+      - mongodb
+      - rabbitmq
+    networks:
+      - classcast-network-prod
+    restart: always
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  media-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        SERVICE: media
+    container_name: classcast-media-prod
+    ports:
+      - "${MEDIA_PORT:-3007}:3007"
+      - "10000-10100:10000-10100/udp"
+    environment:
+      NODE_ENV: production
+    env_file:
+      - .env
+    depends_on:
+      - redis
+      - minio
+    networks:
+      - classcast-network-prod
+    restart: always
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  signaling-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        SERVICE: signaling
+    container_name: classcast-signaling-prod
+    ports:
+      - "${SIGNALING_PORT:-3008}:3008"
+    environment:
+      NODE_ENV: production
+    env_file:
+      - .env
+    depends_on:
+      - redis
+      - rabbitmq
+    networks:
+      - classcast-network-prod
+    restart: always
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  recording-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        SERVICE: recording
+    container_name: classcast-recording-prod
+    ports:
+      - "${RECORDING_PORT:-3009}:3009"
+    environment:
+      NODE_ENV: production
+    env_file:
+      - .env
+    depends_on:
+      - minio
+      - rabbitmq
+    networks:
+      - classcast-network-prod
+    restart: always
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  gateway:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        SERVICE: gateway
+    container_name: classcast-gateway-prod
+    ports:
+      - "${GATEWAY_PORT:-8000}:8000"
+    environment:
+      NODE_ENV: production
+    env_file:
+      - .env
+    depends_on:
+      - auth-service
+      - class-service
+      - payment-service
+      - video-service
+      - chat-service
+      - notification-service
+      - media-service
+      - signaling-service
+      - recording-service
+    networks:
+      - classcast-network-prod
+    restart: always
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+networks:
+  classcast-network-prod:
+    driver: bridge
+
+volumes:
+  mongodb_data_prod:
+    driver: local
+  redis_data_prod:
+    driver: local
+  rabbitmq_data_prod:
+    driver: local
+  minio_data_prod:
+    driver: local

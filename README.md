@@ -33,15 +33,15 @@
 
 ```mermaid
 graph TD
-    GW[Gateway (8000)] --> AUTH[Auth (3001)]
-    GW --> CLASS[Class (3002)]
-    GW --> PAYMENT[Payment (3003)]
-    GW --> VIDEO[Video (3004)]
-    GW --> CHAT[Chat (3005)]
-    GW --> NOTIF[Notification (3006)]
-    GW --> MEDIA[Media (3007)]
-    GW --> SIGNAL[Signaling (3008)]
-    GW --> RECORD[Recording (3009)]
+    GW["Gateway (8000)"] --> AUTH["Auth (3001)"]
+    GW --> CLASS["Class (3002)"]
+    GW --> PAYMENT["Payment (3003)"]
+    GW --> VIDEO["Video (3004)"]
+    GW --> CHAT["Chat (3005)"]
+    GW --> NOTIF["Notification (3006)"]
+    GW --> MEDIA["Media (3007)"]
+    GW --> SIGNAL["Signaling (3008)"]
+    GW --> RECORD["Recording (3009)"]
     AUTH <--> RABBIT["RabbitMQ"]
     CLASS <--> RABBIT
     PAYMENT <--> RABBIT
@@ -52,9 +52,25 @@ graph TD
     SIGNAL <--> RABBIT
     RECORD <--> RABBIT
     GW <--> RABBIT
-    VIDEO <--> MINIO[MinIO]
-    ALL[All Services] --> REDIS[Redis]
-    ALL --> MONGO[MongoDB]
+    VIDEO --> MINIO["MinIO"]
+    AUTH --> REDIS["Redis"]
+    CLASS --> REDIS
+    PAYMENT --> REDIS
+    VIDEO --> REDIS
+    CHAT --> REDIS
+    NOTIF --> REDIS
+    MEDIA --> REDIS
+    SIGNAL --> REDIS
+    RECORD --> REDIS
+    AUTH --> MONGO["MongoDB"]
+    CLASS --> MONGO
+    PAYMENT --> MONGO
+    VIDEO --> MONGO
+    CHAT --> MONGO
+    NOTIF --> MONGO
+    MEDIA --> MONGO
+    SIGNAL --> MONGO
+    RECORD --> MONGO
 ```
 
 ---
